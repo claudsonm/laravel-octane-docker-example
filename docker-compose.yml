@@ -1,0 +1,57 @@
+version: "3.7"
+services:
+    app:
+        build:
+            args:
+                user: octane
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        image: octane-teste
+        container_name: octane-app
+        restart: unless-stopped
+        entrypoint: php /var/www/html/artisan octane:start --host=0.0.0.0
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - octane
+        depends_on:
+            - db
+
+    nginx:
+        image: nginx:1.18-alpine
+        container_name: octane-nginx
+        restart: unless-stopped
+        depends_on:
+            - app
+        ports:
+            - "80:80"
+        volumes:
+            - ./:/var/www/html
+            - ./.docker/nginx/conf.d:/etc/nginx/conf.d
+        networks:
+            - octane
+
+    db:
+        image: mysql:8.0
+        container_name: octane-db
+        restart: unless-stopped
+        command: --sql_mode="" --max-allowed-packet=5M
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+        ports:
+            - "33061:3306"
+        volumes:
+            - mysql-data:/var/lib/mysql
+        networks:
+            - octane
+
+networks:
+    octane:
+        driver: bridge
+
+volumes:
+    mysql-data:
